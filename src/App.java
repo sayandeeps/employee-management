@@ -207,17 +207,178 @@ public class App {
         searchempBtn.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                // Perform search and update the table model
-                try (Connection conn = DriverManager.getConnection(url, user, pass);
-                        PreparedStatement stmt = conn.prepareStatement(query);
-                        ResultSet rs = stmt.executeQuery()) {
-                    table[0].setModel(buildTableModel(rs)); // Update the table model
-                } catch (SQLException ex) {
-                    ex.printStackTrace();
-                    JOptionPane.showMessageDialog(welcomeFrame, "Error searching employees: " + ex.getMessage());
+                JDialog searchEmployeeDialog = new JDialog(welcomeFrame, "Search Employee", true);
+                searchEmployeeDialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+                searchEmployeeDialog.setSize(400, 300);
+
+                JPanel searchEmployeePanel = new JPanel(new GridBagLayout());
+                GridBagConstraints searchEmployeeConstraints = new GridBagConstraints();
+                searchEmployeeConstraints.insets = new Insets(10, 10, 10, 10);
+
+                JLabel nameLabel = new JLabel("Enter Name Pattern:");
+                searchEmployeeConstraints.gridx = 0;
+                searchEmployeeConstraints.gridy = 0;
+                searchEmployeePanel.add(nameLabel, searchEmployeeConstraints);
+
+                JTextField nameField = new JTextField(20);
+                nameField.setPreferredSize(new Dimension(200, nameField.getPreferredSize().height));
+                searchEmployeeConstraints.gridx = 0;
+                searchEmployeeConstraints.gridy = 1;
+                searchEmployeePanel.add(nameField, searchEmployeeConstraints);
+
+                JButton searchButton = new JButton("Search");
+                searchEmployeeConstraints.gridx = 0;
+                searchEmployeeConstraints.gridy = 2;
+                searchEmployeeConstraints.gridwidth = 2;
+                searchEmployeeConstraints.anchor = GridBagConstraints.CENTER;
+                searchEmployeePanel.add(searchButton, searchEmployeeConstraints);
+
+                // Add ActionListener to search button to search for employees based on the name
+                // pattern
+                searchButton.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        String searchName = nameField.getText();
+                        // Perform search and update the table model
+                        String searchQuery = "SELECT * FROM employee WHERE name LIKE ?";
+                        try (Connection conn = DriverManager.getConnection(url, user, pass);
+                                PreparedStatement stmt = conn.prepareStatement(searchQuery)) {
+                            stmt.setString(1, "%" + searchName + "%");
+                            try (ResultSet rs = stmt.executeQuery()) {
+                                table[0].setModel(buildTableModel(rs)); // Update the table model
+                            }
+                        } catch (SQLException ex) {
+                            ex.printStackTrace();
+                            JOptionPane.showMessageDialog(searchEmployeeDialog,
+                                    "Error searching employees: " + ex.getMessage());
+                        }
+
+                        if (table[0].getRowCount() == 0) {
+                            JOptionPane.showMessageDialog(searchEmployeeDialog,
+                                    "No employee found with the name: " + searchName);
+                        }
+                        if (table[0].getRowCount() > 0) {
+                            searchEmployeeDialog.dispose();
+                        }
+                    }
+                });
+                searchEmployeeDialog.add(searchEmployeePanel);
+                searchEmployeeDialog.setLocationRelativeTo(welcomeFrame);
+                searchEmployeeDialog.setVisible(true);
+            }
+        });
+
+        upempBtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String empID = JOptionPane.showInputDialog(welcomeFrame, "Enter Employee ID:");
+                if (empID != null && !empID.isEmpty()) {
+                    // Check if employee with the given ID exists
+                    String searchQuery = "SELECT * FROM employee WHERE emp_id = ?";
+                    try (Connection conn = DriverManager.getConnection(url, user, pass);
+                            PreparedStatement stmt = conn.prepareStatement(searchQuery)) {
+                        stmt.setString(1, empID);
+                        try (ResultSet rs = stmt.executeQuery()) {
+                            if (rs.next()) {
+                                // Employee found, show update dialog
+                                String name = rs.getString("name");
+                                String role = rs.getString("role");
+                                String salary = rs.getString("salary");
+
+                                // Create a new modal dialog for updating the employee
+                                JDialog updateEmployeeDialog = new JDialog(welcomeFrame, "Update Employee", true);
+                                updateEmployeeDialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+                                updateEmployeeDialog.setSize(400, 300);
+
+                                // Create a panel for the form
+                                JPanel updateEmployeePanel = new JPanel(new GridBagLayout());
+                                GridBagConstraints updateEmployeeConstraints = new GridBagConstraints();
+                                updateEmployeeConstraints.insets = new Insets(10, 10, 10, 10);
+
+                                JLabel nameLabel = new JLabel("Name:");
+                                updateEmployeeConstraints.gridx = 0;
+                                updateEmployeeConstraints.gridy = 0;
+                                updateEmployeePanel.add(nameLabel, updateEmployeeConstraints);
+
+                                JTextField nameField = new JTextField(name, 20);
+                                updateEmployeeConstraints.gridx = 1;
+                                updateEmployeeConstraints.gridy = 0;
+                                updateEmployeePanel.add(nameField, updateEmployeeConstraints);
+
+                                JLabel roleLabel = new JLabel("Role:");
+                                updateEmployeeConstraints.gridx = 0;
+                                updateEmployeeConstraints.gridy = 1;
+                                updateEmployeePanel.add(roleLabel, updateEmployeeConstraints);
+
+                                JTextField roleField = new JTextField(role, 20);
+                                updateEmployeeConstraints.gridx = 1;
+                                updateEmployeeConstraints.gridy = 1;
+                                updateEmployeePanel.add(roleField, updateEmployeeConstraints);
+
+                                JLabel salaryLabel = new JLabel("Salary:");
+                                updateEmployeeConstraints.gridx = 0;
+                                updateEmployeeConstraints.gridy = 2;
+                                updateEmployeePanel.add(salaryLabel, updateEmployeeConstraints);
+
+                                JTextField salaryField = new JTextField(salary, 20);
+                                updateEmployeeConstraints.gridx = 1;
+                                updateEmployeeConstraints.gridy = 2;
+                                updateEmployeePanel.add(salaryField, updateEmployeeConstraints);
+
+                                JButton saveButton = new JButton("Save");
+                                updateEmployeeConstraints.gridx = 0;
+                                updateEmployeeConstraints.gridy = 3;
+                                updateEmployeeConstraints.gridwidth = 2;
+                                updateEmployeeConstraints.anchor = GridBagConstraints.CENTER;
+                                updateEmployeePanel.add(saveButton, updateEmployeeConstraints);
+
+                                // Add ActionListener to save button to update employee details in the database
+                                saveButton.addActionListener(new ActionListener() {
+                                    @Override
+                                    public void actionPerformed(ActionEvent e) {
+                                        String newEmployeeName = nameField.getText();
+                                        String newEmployeeRole = roleField.getText();
+                                        String newEmployeeSalary = salaryField.getText();
+
+                                        // Update employee details in the database
+                                        String updateQuery = "UPDATE employee SET name = ?, role = ?, salary = ? WHERE emp_id = ?";
+                                        try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) {
+                                            updateStmt.setString(1, newEmployeeName);
+                                            updateStmt.setString(2, newEmployeeRole);
+                                            updateStmt.setString(3, newEmployeeSalary);
+                                            updateStmt.setString(4, empID);
+                                            updateStmt.executeUpdate();
+
+                                            // Refresh the table data after updating employee
+                                            try (PreparedStatement refreshStmt = conn.prepareStatement(query);
+                                                    ResultSet refreshRs = refreshStmt.executeQuery()) {
+                                                table[0].setModel(buildTableModel(refreshRs)); // Update the table model
+                                            }
+                                        } catch (SQLException ex) {
+                                            ex.printStackTrace();
+                                            JOptionPane.showMessageDialog(updateEmployeeDialog,
+                                                    "Error updating employee: " + ex.getMessage());
+                                        }
+
+                                        updateEmployeeDialog.dispose(); // Close the dialog after saving
+                                    }
+                                });
+
+                                updateEmployeeDialog.add(updateEmployeePanel);
+                                updateEmployeeDialog.setLocationRelativeTo(welcomeFrame);
+                                updateEmployeeDialog.setVisible(true);
+                            } else {
+                                JOptionPane.showMessageDialog(welcomeFrame, "No employee found with ID: " + empID);
+                            }
+                        }
+                    } catch (SQLException ex) {
+                        ex.printStackTrace();
+                        JOptionPane.showMessageDialog(welcomeFrame, "Error updating employee: " + ex.getMessage());
+                    }
                 }
             }
         });
+
         newempBtn.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
