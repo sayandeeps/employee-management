@@ -1,4 +1,6 @@
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -6,12 +8,15 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.Vector;
 
 public class App {
     public static void main(String[] args) {
         JFrame frame = new JFrame("Employee Login");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(800, 400);
 
         JPanel panel = new JPanel(new GridBagLayout());
         GridBagConstraints constraints = new GridBagConstraints();
@@ -53,7 +58,7 @@ public class App {
 
                 if (authenticate(username, password)) {
                     JOptionPane.showMessageDialog(frame, "Login successful");
-                    // Perform actions after successful login
+                    showWelcomeFrame(username, frame);
                 } else {
                     JOptionPane.showMessageDialog(frame, "Invalid username or password");
                 }
@@ -85,4 +90,338 @@ public class App {
             return false;
         }
     }
+
+    private static void showWelcomeFrame(String username, JFrame loginFrame) {
+        JFrame welcomeFrame = new JFrame("Welcome, " + username + "!");
+        welcomeFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+        JPanel panel = new JPanel(new GridBagLayout());
+        GridBagConstraints constraints = new GridBagConstraints();
+        constraints.insets = new Insets(10, 10, 10, 10);
+
+        JLabel greetingLabel = new JLabel("Hello, " + username + "!");
+        constraints.gridx = 0;
+        constraints.gridy = 0;
+        panel.add(greetingLabel, constraints);
+
+        JButton manageEmployeesButton = new JButton("Manage Employees");
+        manageEmployeesButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Add action for managing employees
+                JOptionPane.showMessageDialog(welcomeFrame,
+                        "All Employee Details are confidential and for internal use only");
+                showManageEmployee(username);
+            }
+        });
+        constraints.gridx = 0;
+        constraints.gridy = 1;
+        panel.add(manageEmployeesButton, constraints);
+
+        JButton managePayrollButton = new JButton("Manage Payroll");
+        managePayrollButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Add action for managing payroll
+                JOptionPane.showMessageDialog(welcomeFrame, "Manage Payroll feature coming soon!");
+            }
+        });
+        constraints.gridx = 0;
+        constraints.gridy = 2;
+        panel.add(managePayrollButton, constraints);
+
+        JButton manageattendanceBtn = new JButton("Manage Attendance");
+        managePayrollButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Add action for managing payroll
+                JOptionPane.showMessageDialog(welcomeFrame, "Manage Attendance feature coming soon!");
+            }
+        });
+        constraints.gridx = 0;
+        constraints.gridy = 3;
+        panel.add(manageattendanceBtn, constraints);
+
+        // Add more buttons for other features as needed
+
+        welcomeFrame.add(panel);
+        welcomeFrame.pack();
+        welcomeFrame.setLocationRelativeTo(null);
+        welcomeFrame.setVisible(true);
+
+        loginFrame.dispose(); // Close the login frame
+    }
+
+    private static void showManageEmployee(String username) {
+        JFrame welcomeFrame = new JFrame("Welcome, " + username + "!");
+        welcomeFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+        JPanel panel = new JPanel(new GridBagLayout());
+        GridBagConstraints constraints = new GridBagConstraints();
+        constraints.insets = new Insets(10, 10, 10, 10);
+
+        JLabel greetingLabel = new JLabel("Hello, " + username + "!");
+        constraints.gridx = 0;
+        constraints.gridy = 0;
+        constraints.gridwidth = 4; // Span across 4 columns
+        panel.add(greetingLabel, constraints);
+
+        JPanel buttonPanel = new JPanel(new GridLayout(1, 4, 10, 10));
+        JButton newempBtn = new JButton("Add New Employee");
+        buttonPanel.add(newempBtn);
+        JButton delempBtn = new JButton("Delete Employee");
+        buttonPanel.add(delempBtn);
+        JButton upempBtn = new JButton("Update Employee");
+        buttonPanel.add(upempBtn);
+        JButton searchempBtn = new JButton("Search Employee");
+        buttonPanel.add(searchempBtn);
+
+        constraints.gridx = 0;
+        constraints.gridy = 1;
+        constraints.gridwidth = 4; // Span across 4 columns
+        panel.add(buttonPanel, constraints);
+
+        // Fetch all employees from the database
+        String url = "jdbc:mysql://localhost:3306/employeemanage";
+        String user = "root";
+        String pass = "password";
+        String query = "SELECT * FROM employee";
+        final JTable[] table = { new JTable() }; // Create an array to hold the JTable reference
+        try (Connection conn = DriverManager.getConnection(url, user, pass);
+                PreparedStatement stmt = conn.prepareStatement(query);
+                ResultSet rs = stmt.executeQuery()) {
+
+            // Create a table to display the employee data
+            table[0] = new JTable(buildTableModel(rs));
+            JScrollPane scrollPane = new JScrollPane(table[0]);
+            constraints.gridx = 0;
+            constraints.gridy = 2;
+            constraints.gridwidth = 4; // Span across 4 columns
+            panel.add(scrollPane, constraints);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(welcomeFrame, "Error fetching employees: " + e.getMessage());
+        }
+
+        // Add action listener for the search button
+        searchempBtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Perform search and update the table model
+                try (Connection conn = DriverManager.getConnection(url, user, pass);
+                        PreparedStatement stmt = conn.prepareStatement(query);
+                        ResultSet rs = stmt.executeQuery()) {
+                    table[0].setModel(buildTableModel(rs)); // Update the table model
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                    JOptionPane.showMessageDialog(welcomeFrame, "Error searching employees: " + ex.getMessage());
+                }
+            }
+        });
+        newempBtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Create a new modal dialog for adding a new employee
+                JDialog addEmployeeDialog = new JDialog(welcomeFrame, "Add New Employee", true);
+                addEmployeeDialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+                addEmployeeDialog.setSize(400, 300);
+
+                // Create a panel for the form
+                JPanel addEmployeePanel = new JPanel(new GridBagLayout());
+                GridBagConstraints addEmployeeConstraints = new GridBagConstraints();
+                addEmployeeConstraints.insets = new Insets(10, 10, 10, 10);
+
+                JLabel nameLabel = new JLabel("Name:");
+                addEmployeeConstraints.gridx = 0;
+                addEmployeeConstraints.gridy = 0;
+                addEmployeePanel.add(nameLabel, addEmployeeConstraints);
+
+                JTextField nameField = new JTextField(20);
+                addEmployeeConstraints.gridx = 1;
+                addEmployeeConstraints.gridy = 0;
+                addEmployeePanel.add(nameField, addEmployeeConstraints);
+
+                JLabel roleLabel = new JLabel("Role:");
+                addEmployeeConstraints.gridx = 0;
+                addEmployeeConstraints.gridy = 1;
+                addEmployeePanel.add(roleLabel, addEmployeeConstraints);
+
+                JTextField roleField = new JTextField(20);
+                addEmployeeConstraints.gridx = 1;
+                addEmployeeConstraints.gridy = 1;
+                addEmployeePanel.add(roleField, addEmployeeConstraints);
+
+                JLabel salaryLabel = new JLabel("Salary:");
+                addEmployeeConstraints.gridx = 0;
+                addEmployeeConstraints.gridy = 2;
+                addEmployeePanel.add(salaryLabel, addEmployeeConstraints);
+
+                JTextField salaryField = new JTextField(20);
+                addEmployeeConstraints.gridx = 1;
+                addEmployeeConstraints.gridy = 2;
+                addEmployeePanel.add(salaryField, addEmployeeConstraints);
+
+                JButton saveButton = new JButton("Save");
+                addEmployeeConstraints.gridx = 0;
+                addEmployeeConstraints.gridy = 3;
+                addEmployeeConstraints.gridwidth = 2;
+                addEmployeeConstraints.anchor = GridBagConstraints.CENTER;
+                addEmployeePanel.add(saveButton, addEmployeeConstraints);
+
+                // Add ActionListener to save button to insert new employee into the database
+                saveButton.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        String newEmployeeName = nameField.getText();
+                        String newEmployeeRole = roleField.getText();
+                        String newEmployeeSalary = salaryField.getText();
+
+                        // Insert new employee into the database
+                        String insertQuery = "INSERT INTO employee (name, role, days_present, salary) VALUES (?, ?, ?, ?)";
+                        try (Connection conn = DriverManager.getConnection(url, user, pass);
+                                PreparedStatement insertStmt = conn.prepareStatement(insertQuery)) {
+                            insertStmt.setString(1, newEmployeeName);
+                            insertStmt.setString(2, newEmployeeRole);
+                            insertStmt.setString(3, "0");
+
+                            insertStmt.setString(4, newEmployeeSalary);
+                            insertStmt.executeUpdate();
+
+                            // Refresh the table data after adding a new employee
+                            try (PreparedStatement stmt = conn.prepareStatement(query);
+                                    ResultSet rs = stmt.executeQuery()) {
+                                table[0].setModel(buildTableModel(rs)); // Update the table model
+                            }
+                        } catch (SQLException ex) {
+                            ex.printStackTrace();
+                            JOptionPane.showMessageDialog(addEmployeeDialog,
+                                    "Error adding new employee: " + ex.getMessage());
+                        }
+
+                        addEmployeeDialog.dispose(); // Close the dialog after saving
+                    }
+                });
+
+                addEmployeeDialog.add(addEmployeePanel);
+                addEmployeeDialog.setLocationRelativeTo(welcomeFrame);
+                addEmployeeDialog.setVisible(true);
+            }
+        });
+
+        delempBtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Create a new modal dialog for adding a new employee
+                JDialog delEmployeeDialog = new JDialog(welcomeFrame, "Delete Employee", true);
+                delEmployeeDialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+                delEmployeeDialog.setSize(400, 300);
+
+                // Create a panel for the form
+                JPanel addEmployeePanel = new JPanel(new GridBagLayout());
+                GridBagConstraints addEmployeeConstraints = new GridBagConstraints();
+                addEmployeeConstraints.insets = new Insets(10, 10, 10, 10);
+
+                JLabel nameLabel = new JLabel("Employee id to be deleted:");
+                addEmployeeConstraints.gridx = 0;
+                addEmployeeConstraints.gridy = 0;
+                addEmployeePanel.add(nameLabel, addEmployeeConstraints);
+
+                JTextField nameField = new JTextField(30);
+                addEmployeeConstraints.gridx = 0;
+                addEmployeeConstraints.gridy = 1;
+                addEmployeePanel.add(nameField, addEmployeeConstraints);
+                JButton saveButton = new JButton("Delete the employee");
+                addEmployeeConstraints.gridx = 0;
+                addEmployeeConstraints.gridy = 3;
+                addEmployeeConstraints.gridwidth = 2;
+                addEmployeeConstraints.anchor = GridBagConstraints.CENTER;
+                addEmployeePanel.add(saveButton, addEmployeeConstraints);
+
+                // Add ActionListener to save button to insert new employee into the database
+                saveButton.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        String newEmployeeName = nameField.getText();
+                        // Check if the employee ID exists
+                        String checkQuery = "SELECT * FROM employee WHERE emp_id = ?";
+                        try (Connection conn = DriverManager.getConnection(url, user, pass);
+                                PreparedStatement checkStmt = conn.prepareStatement(checkQuery)) {
+                            checkStmt.setString(1, newEmployeeName);
+                            try (ResultSet rs = checkStmt.executeQuery()) {
+                                if (!rs.next()) {
+                                    JOptionPane.showMessageDialog(delEmployeeDialog,
+                                            "No employee with ID " + newEmployeeName + " found!");
+                                    return;
+                                }
+                            }
+                        } catch (SQLException ex) {
+                            ex.printStackTrace();
+                            JOptionPane.showMessageDialog(delEmployeeDialog,
+                                    "Error checking employee ID: " + ex.getMessage());
+                            return;
+                        }
+
+                        // Confirmation dialog before deleting
+                        int result = JOptionPane.showConfirmDialog(delEmployeeDialog,
+                                "Are you sure you want to delete employee with ID " + newEmployeeName + "?",
+                                "Confirm Deletion", JOptionPane.YES_NO_OPTION);
+                        if (result == JOptionPane.YES_OPTION) {
+                            // Delete the employee
+                            String deleteQuery = "DELETE FROM employee WHERE emp_id = ?";
+                            try (Connection conn = DriverManager.getConnection(url, user, pass);
+                                    PreparedStatement deleteStmt = conn.prepareStatement(deleteQuery)) {
+                                deleteStmt.setString(1, newEmployeeName);
+                                deleteStmt.executeUpdate();
+
+                                // Refresh the table data after deleting the employee
+                                try (PreparedStatement stmt = conn.prepareStatement(query);
+                                        ResultSet rs = stmt.executeQuery()) {
+                                    table[0].setModel(buildTableModel(rs)); // Update the table model
+                                }
+                            } catch (SQLException ex) {
+                                ex.printStackTrace();
+                                JOptionPane.showMessageDialog(delEmployeeDialog,
+                                        "Error deleting employee: " + ex.getMessage());
+                            }
+                        }
+
+                        delEmployeeDialog.dispose(); // Close the dialog after saving
+                    }
+                });
+
+                delEmployeeDialog.add(addEmployeePanel);
+                delEmployeeDialog.setLocationRelativeTo(welcomeFrame);
+                delEmployeeDialog.setVisible(true);
+            }
+        });
+
+        welcomeFrame.add(panel);
+        welcomeFrame.pack();
+        welcomeFrame.setLocationRelativeTo(null);
+        welcomeFrame.setVisible(true);
+    }
+
+    public static DefaultTableModel buildTableModel(ResultSet rs) throws SQLException {
+        ResultSetMetaData metaData = rs.getMetaData();
+
+        // Names of columns
+        Vector<String> columnNames = new Vector<>();
+        int columnCount = metaData.getColumnCount();
+        for (int i = 1; i <= columnCount; i++) {
+            columnNames.add(metaData.getColumnName(i));
+        }
+
+        // Data of the table
+        Vector<Vector<Object>> data = new Vector<>();
+        while (rs.next()) {
+            Vector<Object> vector = new Vector<>();
+            for (int i = 1; i <= columnCount; i++) {
+                vector.add(rs.getObject(i));
+            }
+            data.add(vector);
+        }
+
+        return new DefaultTableModel(data, columnNames);
+    }
+
 }
