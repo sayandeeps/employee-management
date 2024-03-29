@@ -109,8 +109,7 @@ public class App {
             @Override
             public void actionPerformed(ActionEvent e) {
                 // Add action for managing employees
-                JOptionPane.showMessageDialog(welcomeFrame,
-                        "All Employee Details are confidential and for internal use only");
+
                 showManageEmployee(username);
             }
         });
@@ -122,8 +121,7 @@ public class App {
         managePayrollButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                // Add action for managing payroll
-                JOptionPane.showMessageDialog(welcomeFrame, "Manage Payroll feature coming soon!");
+
             }
         });
         constraints.gridx = 0;
@@ -131,11 +129,116 @@ public class App {
         panel.add(managePayrollButton, constraints);
 
         JButton manageattendanceBtn = new JButton("Manage Attendance");
-        managePayrollButton.addActionListener(new ActionListener() {
+        manageattendanceBtn.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 // Add action for managing payroll
-                JOptionPane.showMessageDialog(welcomeFrame, "Manage Attendance feature coming soon!");
+                String empID = JOptionPane.showInputDialog(welcomeFrame, "Enter Employee ID:");
+                if (empID != null && !empID.isEmpty()) {
+                    // Check if employee with the given ID exists
+                    String url = "jdbc:mysql://localhost:3306/employeemanage";
+                    String user = "root";
+                    String pass = "password";
+                    String searchQuery = "SELECT * FROM employee WHERE emp_id = ?";
+                    try (Connection conn = DriverManager.getConnection(url, user, pass);
+                            PreparedStatement stmt = conn.prepareStatement(searchQuery)) {
+                        stmt.setString(1, empID);
+                        try (ResultSet rs = stmt.executeQuery()) {
+                            if (rs.next()) {
+                                // Employee found, show update dialog
+                                String name = rs.getString("name");
+                                String role = rs.getString("role");
+                                String salary = rs.getString("days_present");
+
+                                // Create a new modal dialog for updating the employee
+                                JDialog updateEmployeeDialog = new JDialog(welcomeFrame, "Add leaves to Employee",
+                                        true);
+                                updateEmployeeDialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+                                updateEmployeeDialog.setSize(400, 300);
+
+                                // Create a panel for the form
+                                JPanel updateEmployeePanel = new JPanel(new GridBagLayout());
+                                GridBagConstraints updateEmployeeConstraints = new GridBagConstraints();
+                                updateEmployeeConstraints.insets = new Insets(10, 10, 10, 10);
+
+                                JLabel nameLabel = new JLabel("Name:");
+                                updateEmployeeConstraints.gridx = 0;
+                                updateEmployeeConstraints.gridy = 0;
+                                updateEmployeePanel.add(nameLabel, updateEmployeeConstraints);
+
+                                JTextField nameField = new JTextField(name, 20);
+                                nameField.setEditable(false); // Make it non-editable
+                                updateEmployeeConstraints.gridx = 1;
+                                updateEmployeeConstraints.gridy = 0;
+                                updateEmployeePanel.add(nameField, updateEmployeeConstraints);
+
+                                JLabel roleLabel = new JLabel("Role:");
+                                updateEmployeeConstraints.gridx = 0;
+                                updateEmployeeConstraints.gridy = 1;
+                                updateEmployeePanel.add(roleLabel, updateEmployeeConstraints);
+
+                                JTextField roleField = new JTextField(role, 20);
+                                nameField.setEditable(false); // Make it non-editable
+                                updateEmployeeConstraints.gridx = 1;
+                                updateEmployeeConstraints.gridy = 1;
+                                updateEmployeePanel.add(roleField, updateEmployeeConstraints);
+
+                                JLabel salaryLabel = new JLabel("Attendance :");
+                                updateEmployeeConstraints.gridx = 0;
+                                updateEmployeeConstraints.gridy = 2;
+                                updateEmployeePanel.add(salaryLabel, updateEmployeeConstraints);
+
+                                JTextField salaryField = new JTextField(salary, 20);
+                                updateEmployeeConstraints.gridx = 1;
+                                updateEmployeeConstraints.gridy = 2;
+                                updateEmployeePanel.add(salaryField, updateEmployeeConstraints);
+
+                                JButton saveButton = new JButton("Save");
+                                updateEmployeeConstraints.gridx = 0;
+                                updateEmployeeConstraints.gridy = 3;
+                                updateEmployeeConstraints.gridwidth = 2;
+                                updateEmployeeConstraints.anchor = GridBagConstraints.CENTER;
+                                updateEmployeePanel.add(saveButton, updateEmployeeConstraints);
+
+                                // Add ActionListener to save button to update employee details in the database
+                                saveButton.addActionListener(new ActionListener() {
+                                    @Override
+                                    public void actionPerformed(ActionEvent e) {
+                                        String newEmployeeSalary = salaryField.getText();
+
+                                        // Update employee details in the database
+                                        String updateQuery = "UPDATE employee SET days_present = ? WHERE emp_id = ?";
+                                        try (PreparedStatement updateStmt = conn.prepareStatement(updateQuery)) {
+                                            updateStmt.setString(1, newEmployeeSalary);
+                                            updateStmt.setString(2, empID);
+                                            updateStmt.executeUpdate();
+
+                                            // Refresh the table data after updating employee
+                                            JOptionPane.showMessageDialog(updateEmployeeDialog,
+                                                    "Attendance Added Successfully");
+
+                                        } catch (SQLException ex) {
+                                            ex.printStackTrace();
+                                            JOptionPane.showMessageDialog(updateEmployeeDialog,
+                                                    "Error updating employee: " + ex.getMessage());
+                                        }
+
+                                        updateEmployeeDialog.dispose(); // Close the dialog after saving
+                                    }
+                                });
+
+                                updateEmployeeDialog.add(updateEmployeePanel);
+                                updateEmployeeDialog.setLocationRelativeTo(welcomeFrame);
+                                updateEmployeeDialog.setVisible(true);
+                            } else {
+                                JOptionPane.showMessageDialog(welcomeFrame, "No employee found with ID: " + empID);
+                            }
+                        }
+                    } catch (SQLException ex) {
+                        ex.printStackTrace();
+                        JOptionPane.showMessageDialog(welcomeFrame, "Error updating employee: " + ex.getMessage());
+                    }
+                }
             }
         });
         constraints.gridx = 0;
